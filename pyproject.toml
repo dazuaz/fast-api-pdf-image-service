@@ -1,0 +1,32 @@
+[project]
+name = "pdf-thumbnail-service"
+version = "0.1.0"
+description = "FastAPI service: upload PDFs or images, get stable SHA-256-addressed thumbnail URLs (Vercel + S3 friendly)."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = "==3.12.*"
+keywords = ["fastapi", "pdf", "thumbnail", "vercel", "s3", "pymupdf"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: FastAPI",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+]
+dependencies = [
+  "boto3>=1.39.0",
+  "fastapi>=0.121.0",
+  "httpx>=0.28.0",
+  "jinja2>=3.1.4",
+  "pillow>=11.0.0",
+  "pydantic-settings>=2.2.1",
+  "pymupdf>=1.25.0",
+  "python-multipart>=0.0.20",
+  "uvicorn>=0.34.0",
+]
+
+[tool.vercel]
+entrypoint = "app.main:app"
