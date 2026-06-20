@@ -88,6 +88,36 @@ class ApiSecurityTests(unittest.TestCase):
         self.assertEqual(response.headers["referrer-policy"], "no-referrer")
         self.assertIn("max-age=63072000", response.headers["strict-transport-security"])
 
+    def test_cors_reflects_localhost_3000_origin(self) -> None:
+        if not settings.cors_origins:
+            self.skipTest("CORS disabled (e.g. empty CORS_ORIGINS on Vercel)")
+        response = self.client.get(
+            "/",
+            headers={"Origin": "http://localhost:3000"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get("access-control-allow-origin"),
+            "http://localhost:3000",
+        )
+
+    def test_cors_preflight_for_api_post(self) -> None:
+        if not settings.cors_origins:
+            self.skipTest("CORS disabled (e.g. empty CORS_ORIGINS on Vercel)")
+        response = self.client.options(
+            "/api/v1/documents/",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization,content-type",
+            },
+        )
+        self.assertIn(response.status_code, (200, 204))
+        self.assertEqual(
+            response.headers.get("access-control-allow-origin"),
+            "http://localhost:3000",
+        )
+
 
 class SourceUrlSecurityTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:

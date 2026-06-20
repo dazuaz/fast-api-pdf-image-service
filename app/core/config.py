@@ -16,6 +16,13 @@ def _default_enable_api_docs() -> bool:
     return not bool(os.environ.get("VERCEL"))
 
 
+def _default_cors_origins() -> str:
+    # Browser calls from a local dev server (e.g. Next.js on :3000) need CORS.
+    if os.environ.get("VERCEL"):
+        return ""
+    return "http://localhost:3000,http://127.0.0.1:3000"
+
+
 def _parse_csv(raw: str | None) -> tuple[str, ...]:
     if not raw:
         return ()
@@ -41,6 +48,7 @@ class Settings(BaseSettings):
     PROTECT_THUMBNAILS_WITH_API_KEY: bool = False
     ENABLE_API_DOCS: bool = Field(default_factory=_default_enable_api_docs)
     ALLOWED_HOSTS: str = ""
+    CORS_ORIGINS: str = Field(default_factory=_default_cors_origins)
 
     ALLOW_INSECURE_SOURCE_HTTP: bool = False
     BLOCK_PRIVATE_SOURCE_ADDRESSES: bool = True
@@ -57,6 +65,10 @@ class Settings(BaseSettings):
     @property
     def allowed_hosts(self) -> tuple[str, ...]:
         return _parse_csv(self.ALLOWED_HOSTS)
+
+    @property
+    def cors_origins(self) -> tuple[str, ...]:
+        return _parse_csv(self.CORS_ORIGINS)
 
     @property
     def source_url_allowed_hosts(self) -> tuple[str, ...]:
