@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     DEFAULT_THUMB_MAX_WIDTH: int = 256
 
     API_KEY: str | None = None
+    THUMBNAIL_SERVICE_API_KEY: str | None = None
     PROTECT_THUMBNAILS_WITH_API_KEY: bool = False
     ENABLE_API_DOCS: bool = Field(default_factory=_default_enable_api_docs)
     ALLOWED_HOSTS: str = ""
@@ -61,6 +62,22 @@ class Settings(BaseSettings):
     S3_KEY_PREFIX: str = "documents"
 
     PDF_LOCAL_CACHE_DIR: Path = Field(default_factory=_default_pdf_cache_dir)
+
+    @model_validator(mode="after")
+    def validate_api_key_aliases(self) -> "Settings":
+        if (
+            self.API_KEY
+            and self.THUMBNAIL_SERVICE_API_KEY
+            and self.API_KEY != self.THUMBNAIL_SERVICE_API_KEY
+        ):
+            raise ValueError(
+                "API_KEY and THUMBNAIL_SERVICE_API_KEY must match when both are set",
+            )
+        return self
+
+    @property
+    def api_key(self) -> str | None:
+        return self.THUMBNAIL_SERVICE_API_KEY or self.API_KEY
 
     @property
     def allowed_hosts(self) -> tuple[str, ...]:

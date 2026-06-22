@@ -16,6 +16,7 @@ Licensed under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md
 | `POST` | `/api/v1/documents/` | Multipart upload (`file` field). Returns `document_id`, `page_count`, and per-page thumbnail URLs. |
 | `POST` | `/api/v1/documents/from-url` | Server-side fetch from `https://...` or `s3://bucket/key`, then register document for thumbnail URLs. |
 | `GET` | `/api/v1/documents/{document_id}/pages/{page}.png` | PNG thumbnail; `page` is **1-based**. Optional query: `max_width` (default from `DEFAULT_THUMB_MAX_WIDTH`, usually 256). |
+| `GET` | `/api/v1/health/auth` | Authenticated smoke check. Returns `{ "ok": true }` with a valid API key. |
 | `GET` | `/docs` | OpenAPI (Swagger), enabled locally and optionally in production |
 
 ### Deterministic URLs
@@ -78,7 +79,8 @@ vercel dev
 | `S3_KEY_PREFIX` | Key prefix inside bucket (default `documents`). |
 | `MAX_UPLOAD_BYTES` | Max multipart upload size (default `4500000`, aligned with Vercel’s ~4.5 MB function body limit). |
 | `MAX_SOURCE_DOWNLOAD_BYTES` | Max size when ingesting via `/from-url` (default `100000000`). |
-| `API_KEY` | If set, `POST /api/v1/documents/` and `POST /api/v1/documents/from-url` require `X-API-Key: <value>` or `Authorization: Bearer <value>`. |
+| `THUMBNAIL_SERVICE_API_KEY` | Preferred app-specific API key. If set, upload, URL-registration, and authenticated health endpoints require `X-API-Key: <value>` or `Authorization: Bearer <value>`. |
+| `API_KEY` | Legacy alias for `THUMBNAIL_SERVICE_API_KEY`. If both are set, they must match. |
 | `PROTECT_THUMBNAILS_WITH_API_KEY` | If `true`, thumbnail `GET` routes also require the API key. |
 | `ENABLE_API_DOCS` | Enables `/docs` and `/openapi.json`. Defaults to `true` locally and `false` on Vercel. |
 | `ALLOWED_HOSTS` | Optional comma-separated host allowlist for `TrustedHostMiddleware` (for example `fast-api-pdf-image-service.vercel.app,localhost,127.0.0.1`). |
@@ -94,7 +96,7 @@ vercel dev
 - Production docs are disabled by default on Vercel unless `ENABLE_API_DOCS=true`.
 - Remote URL ingestion is HTTPS-only by default.
 - `/from-url` rejects hosts that resolve to non-public IP space to reduce SSRF risk.
-- When `API_KEY` is set, upload and URL-registration endpoints require it.
+- When `THUMBNAIL_SERVICE_API_KEY` or `API_KEY` is set, upload, URL-registration, and authenticated health endpoints require it.
 
 ## Deploying to Vercel
 
@@ -115,7 +117,7 @@ pnpm dlx vercel --prod
 ## Notes
 
 - Rendering uses **PyMuPDF** (no separate Poppler install), which fits serverless bundles well.
-- Thumbnail **`max_width`** is part of the URL only as the `max_width` query string; different widths are different cache keys.
+- Thumbnail **`max_width`** is part of the URL only as the `max_width` query string; different widths are different cache keys. Rendered PNGs are cached in the configured storage backend after the first request.
 - `/from-url` avoids request-body upload limits and is better for larger files (still bounded by `MAX_SOURCE_DOWNLOAD_BYTES`).
 
 ## Publishing this repository

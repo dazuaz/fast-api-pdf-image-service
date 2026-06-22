@@ -11,7 +11,13 @@ from app.core.config import settings
 from app.services.document_id import content_document_id
 from app.services.document_source import DocumentSourceError, load_from_source_url
 from app.services.pdf_render import RenderError, page_count, render_page_png
-from app.services.pdf_storage import PdfStorageError, load_pdf, save_pdf
+from app.services.pdf_storage import (
+    PdfStorageError,
+    load_pdf,
+    load_thumbnail_png,
+    save_pdf,
+    save_thumbnail_png,
+)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -54,14 +60,12 @@ async def register_document_from_url(payload: SourceUrlRequest):
         raise HTTPException(status_code=400, detail=str(e)) from e
     return await _register_document_bytes(
         data,
-        source_url=payload.url,
         enforce_upload_limit=False,
     )
 
 
 async def _register_document_bytes(
     data: bytes,
-    source_url: str | None = None,
     enforce_upload_limit: bool = True,
 ):
     if not data:
@@ -84,7 +88,6 @@ async def _register_document_bytes(
     return {
         "document_id": document_id,
         "page_count": n_pages,
-        "source_url": source_url,
         "pages": [
             {
                 "page": p + 1,
@@ -112,6 +115,13 @@ async def get_page_thumbnail(
     mw = max_width if max_width is not None else settings.DEFAULT_THUMB_MAX_WIDTH
 
     try:
+        cached = await load_thumbnail_png(document_id, page, mw)
+    except PdfStorageError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+    if cached is not None:
+        return _thumbnail_response(cached)
+
+    try:
         data = await load_pdf(document_id)
     except PdfStorageError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
@@ -124,7 +134,15 @@ async def get_page_thumbnail(
         png = render_page_png(data, page - 1, mw)
     except RenderError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    try:
+        await save_thumbnail_png(document_id, page, mw, png)
+    except PdfStorageError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
 
+    return _thumbnail_response(png)
+
+
+def _thumbnail_response(png: bytes):
     return Response(
         content=png,
         media_type="image/png",

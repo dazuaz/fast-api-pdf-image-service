@@ -12,7 +12,7 @@ _bearer_auth = HTTPBearer(auto_error=False)
 
 
 def _validate_api_key(candidate: str | None) -> None:
-    expected = settings.API_KEY
+    expected = settings.api_key
     if not expected:
         return
     if candidate and secrets.compare_digest(candidate, expected):
